@@ -160,45 +160,60 @@ static void shallue_van_de_woestijne(secp256k1_ge* ge, const secp256k1_fe* t) {
     secp256k1_fe_cmov(&ge->y, &tmp, secp256k1_fe_is_odd(t));
 }
 
-static int secp256k1_generator_generate_internal(const secp256k1_context* ctx, secp256k1_generator* gen, const unsigned char *key32, const unsigned char *blind32) {
+static int secp256k1_generator_generate_internal(
+        const secp256k1_context* ctx,
+        secp256k1_generator* gen,
+        const unsigned char *key32, // seed
+        const unsigned char *blind32)
+{
     static const unsigned char prefix1[17] = "1st generation: ";
     static const unsigned char prefix2[17] = "2nd generation: ";
     secp256k1_fe t = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 4);
-    secp256k1_ge add;
     secp256k1_gej accum;
     int overflow;
     secp256k1_sha256 sha256;
     unsigned char b32[32];
     int ret = 1;
 
-    if (blind32) {
+    if (blind32 != nullptr) {
         secp256k1_scalar blind;
         secp256k1_scalar_set_b32(&blind, blind32, &overflow);
         ret = !overflow;
         CHECK(ret);
+        // blind * G
         secp256k1_ecmult_gen(&ctx->ecmult_gen_ctx, &accum, &blind);
     }
 
+    // first generation
     secp256k1_sha256_initialize(&sha256);
     secp256k1_sha256_write(&sha256, prefix1, 16);
     secp256k1_sha256_write(&sha256, key32, 32);
     secp256k1_sha256_finalize(&sha256, b32);
     ret &= secp256k1_fe_set_b32(&t, b32);
     CHECK(ret);
+    
+    secp256k1_ge add;
+    // P1: key32 をハッシュ化して点にしたもの
     shallue_van_de_woestijne(&add, &t);
-    if (blind32) {
+    if (blind32 != nullptr) {
+        // P1 + blind * G
         secp256k1_gej_add_ge(&accum, &accum, &add);
     } else {
+        // P1
         secp256k1_gej_set_ge(&accum, &add);
     }
 
+    // second generation
     secp256k1_sha256_initialize(&sha256);
     secp256k1_sha256_write(&sha256, prefix2, 16);
     secp256k1_sha256_write(&sha256, key32, 32);
     secp256k1_sha256_finalize(&sha256, b32);
     ret &= secp256k1_fe_set_b32(&t, b32);
     CHECK(ret);
+    // P2: key32 を別の方法でハッシュ化して点にしたもの
     shallue_van_de_woestijne(&add, &t);
+    // P1 + P2 + blind *G  or
+    // P1 + P2
     secp256k1_gej_add_ge(&accum, &accum, &add);
 
     secp256k1_ge_set_gej(&add, &accum);
@@ -206,11 +221,14 @@ static int secp256k1_generator_generate_internal(const secp256k1_context* ctx, s
     return ret;
 }
 
-int secp256k1_generator_generate(const secp256k1_context* ctx, secp256k1_generator* gen, const unsigned char *key32) {
+int secp256k1_generator_generate(
+        const secp256k1_context* ctx, 
+        secp256k1_generator* gen,
+        const unsigned char *seed32) {
     VERIFY_CHECK(ctx != NULL);
     ARG_CHECK(gen != NULL);
-    ARG_CHECK(key32 != NULL);
-    return secp256k1_generator_generate_internal(ctx, gen, key32, NULL);
+    ARG_CHECK(seed32 != NULL);
+    return secp256k1_generator_generate_internal(ctx, gen, seed32, NULL);
 }
 
 int secp256k1_generator_generate_blinded(const secp256k1_context* ctx, secp256k1_generator* gen, const unsigned char *key32, const unsigned char *blind32) {

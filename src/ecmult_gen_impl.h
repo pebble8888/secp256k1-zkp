@@ -121,7 +121,11 @@ static void secp256k1_ecmult_gen_context_clear(secp256k1_ecmult_gen_context *ctx
     ctx->prec = NULL;
 }
 
-static void secp256k1_ecmult_gen(const secp256k1_ecmult_gen_context *ctx, secp256k1_gej *r, const secp256k1_scalar *gn) {
+/// return  gn * G
+static void secp256k1_ecmult_gen(const secp256k1_ecmult_gen_context *ctx,
+                                 secp256k1_gej *r,
+                                 const secp256k1_scalar *gn)
+{
     secp256k1_ge add;
     secp256k1_ge_storage adds;
     secp256k1_scalar gnb;

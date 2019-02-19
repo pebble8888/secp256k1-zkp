@@ -160,7 +160,14 @@ int secp256k1_pedersen_verify_tally(const secp256k1_context* ctx, const secp256k
     return secp256k1_gej_is_infinity(&accj);
 }
 
-int secp256k1_pedersen_blind_generator_blind_sum(const secp256k1_context* ctx, const uint64_t *value, const unsigned char* const* generator_blind, unsigned char* const* blinding_factor, size_t n_total, size_t n_inputs) {
+int secp256k1_pedersen_blind_generator_blind_sum(
+        const secp256k1_context* ctx,
+        const uint64_t *value, // n_total array
+        const unsigned char* const* generator_blind, // n_total array
+        unsigned char* const* blinding_factor, // n_total array
+        size_t n_total, 
+        size_t n_inputs)
+{
     secp256k1_scalar sum;
     secp256k1_scalar tmp;
     size_t i;
@@ -184,6 +191,7 @@ int secp256k1_pedersen_blind_generator_blind_sum(const secp256k1_context* ctx, c
 
         secp256k1_scalar_set_b32(&tmp, generator_blind[i], &overflow);
         if (overflow == 1) {
+            // error
             secp256k1_scalar_clear(&tmp);
             secp256k1_scalar_clear(&addend);
             secp256k1_scalar_clear(&sum);
@@ -191,8 +199,10 @@ int secp256k1_pedersen_blind_generator_blind_sum(const secp256k1_context* ctx, c
         }
         secp256k1_scalar_mul(&addend, &addend, &tmp); /* s = vr */
 
+        // ここが最後のtmpのセット
         secp256k1_scalar_set_b32(&tmp, blinding_factor[i], &overflow);
         if (overflow == 1) {
+            // error
             secp256k1_scalar_clear(&tmp);
             secp256k1_scalar_clear(&addend);
             secp256k1_scalar_clear(&sum);
@@ -252,8 +262,17 @@ int secp256k1_rangeproof_rewind(const secp256k1_context* ctx,
      blind_out, value_out, message_out, outlen, nonce, min_value, max_value, &commitp, proof, plen, extra_commit, extra_commit_len, &genp);
 }
 
-int secp256k1_rangeproof_verify(const secp256k1_context* ctx, uint64_t *min_value, uint64_t *max_value,
- const secp256k1_pedersen_commitment *commit, const unsigned char *proof, size_t plen, const unsigned char *extra_commit, size_t extra_commit_len, const secp256k1_generator* gen) {
+int secp256k1_rangeproof_verify(
+        const secp256k1_context* ctx,
+        uint64_t *min_value,
+        uint64_t *max_value,
+        const secp256k1_pedersen_commitment *commit,
+        const unsigned char *proof,
+        size_t plen,
+        const unsigned char *extra_commit,
+        size_t extra_commit_len,
+        const secp256k1_generator* gen)
+{
     secp256k1_ge commitp;
     secp256k1_ge genp;
     VERIFY_CHECK(ctx != NULL);
@@ -270,9 +289,23 @@ int secp256k1_rangeproof_verify(const secp256k1_context* ctx, uint64_t *min_valu
      NULL, NULL, NULL, NULL, NULL, min_value, max_value, &commitp, proof, plen, extra_commit, extra_commit_len, &genp);
 }
 
-int secp256k1_rangeproof_sign(const secp256k1_context* ctx, unsigned char *proof, size_t *plen, uint64_t min_value,
- const secp256k1_pedersen_commitment *commit, const unsigned char *blind, const unsigned char *nonce, int exp, int min_bits, uint64_t value,
- const unsigned char *message, size_t msg_len, const unsigned char *extra_commit, size_t extra_commit_len, const secp256k1_generator* gen){
+int secp256k1_rangeproof_sign(
+        const secp256k1_context* ctx,
+        unsigned char *proof, 
+        size_t *plen,
+        uint64_t min_value,
+        const secp256k1_pedersen_commitment *commit, 
+        const unsigned char *blind, 
+        const unsigned char *nonce, 
+        int exp, 
+        int min_bits, 
+        uint64_t value,
+        const unsigned char *message, 
+        size_t msg_len, 
+        const unsigned char *extra_commit, 
+        size_t extra_commit_len, 
+        const secp256k1_generator* gen)
+{
     secp256k1_ge commitp;
     secp256k1_ge genp;
     VERIFY_CHECK(ctx != NULL);
@@ -289,7 +322,7 @@ int secp256k1_rangeproof_sign(const secp256k1_context* ctx, unsigned char *proof
     secp256k1_pedersen_commitment_load(&commitp, commit);
     secp256k1_generator_load(&genp, gen);
     return secp256k1_rangeproof_sign_impl(&ctx->ecmult_ctx, &ctx->ecmult_gen_ctx,
-     proof, plen, min_value, &commitp, blind, nonce, exp, min_bits, value, message, msg_len, extra_commit, extra_commit_len, &genp);
+       proof, plen, min_value, &commitp, blind, nonce, exp, min_bits, value, message, msg_len, extra_commit, extra_commit_len, &genp);
 }
 
 #endif
